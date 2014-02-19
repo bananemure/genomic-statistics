@@ -38,6 +38,8 @@ chromosome(srdta)
 map(srdta)
 #coding of SNPs
 coding(srdta)
+#the strand on which the coding is reported
+strand(gtdata(srdta)): # '-','+',or 'u' for missing
 #ref allele of SNPs
 refallele(srdta)
 #effective allele of SNPs
@@ -52,7 +54,8 @@ names(phdata(srdta))
 srdta<-del.phdata(srdta,what='squaredAge',all=F)
 names(phdata(srdta))
 
-###exploring genotype data
+###################exploring genotype data##################################
+
 #view genabel data as genotype like data: same as genetics package(obselete) 
 head(as.character(srdta),2)
 #translate GenABEL-package genetic data to the format used by "genetics" library
@@ -79,3 +82,42 @@ freqEffectMale<-mean(effQtyMale,na.rm=T)/2
 #compute the same statistic for reference allele
 refQty<-1-effQty
 refQtyMale<-1-effQtyMale
+
+#### To test for HWE in first 10 SNPs in total sample: check the Pexact column
+summary( gtdata(srdta[, 1:10]) )
+
+#######exemple summaries for individuals older than 60
+defAge<-which(srdta@phdata$age>60)
+### To test for HWE in first 10 SNPs in defAge people: check the Pexact column
+summary( gtdata(srdta[defAge, 1:10]) )
+
+##### Look for call rate in whole sample
+summaryWhole<-summary(gtdata(srdta))
+names(summaryWhole)
+calRateWhole<-summaryWhole$CallRate
+hist(calRateWhole)
+# how many markers had call rate lower than, say, 93%, between 93 and 95%, between 95 and 99% and more than 99%
+catable(calRateWhole)
+### how many deviate from HWE
+devHWE<-summaryWhole$Pexact
+beferonniCorrHWE<-0.05/nsnps(srdta)  #beferroni correction for multi-testing
+#table to count with respect to Pvalue
+catable(devHWE,c(beferonniCorrHWE,.01,.05,.1))
+#cumulate table
+catable(devHWE,c(beferonniCorrHWE,.01,.05,.1),cumulative=T)
+
+###investigate the minor allele frequency distribution
+alFreq<-summaryWhole$Q.2
+malFreq<-pmin(alFreq,1. - alFreq)
+hist(malFreq)
+catable(alFreq, c(0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99))
+catable(malFreq, c(0, 0.01, 0.05, 0.1, 0.2), cum=TRUE)
+#visualize the distribution
+par(mfrow=c(1,2))
+hist(alFreq)
+hist(malFreq)
+
+
+
+
+
