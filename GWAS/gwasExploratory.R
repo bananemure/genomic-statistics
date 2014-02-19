@@ -117,6 +117,13 @@ par(mfrow=c(1,2))
 hist(alFreq)
 hist(malFreq)
 
+##another type of summary: per id summary
+#let us look at the distribution of heterozygosity for whole sample
+het<-perid.summary(gtdata(srdta))$Het
+summary(het)
+catable(het, c(0.1, 0.25, 0.3, 0.35, 0.5))
+par(mfrow=c(1,1))
+hist(het)
 
 
 
