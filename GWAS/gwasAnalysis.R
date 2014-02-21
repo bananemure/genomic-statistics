@@ -48,9 +48,9 @@ descriptives.scan(rawGwaStats,sortby='P1df')
 QC1<-check.marker(ge03d2ex,p.level=0)
 #summary of the QC by marker and by person: fails statistics
 summary(QC1)
+<<<<<<< HEAD
 #show qc criteria computed
 names(QC1)
 
 #generate a new data set, which will consist only of people and markers that passed the QC tests
 cleanData1<-ge03d2ex[QC1$idok,QC1$snpok]
-
