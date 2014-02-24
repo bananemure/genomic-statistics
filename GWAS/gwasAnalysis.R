@@ -93,3 +93,40 @@ summary(QC2)
 
 #Indeed, in the updated data set several markers do not pass our QC criteria and we need to drop a few markers.
 cleanData2 <- cleanData2[QC2$idok, QC2$snpok]
+
+###detach the old and attach the new phenotype data in the search path
+detach(phdata(cleanData1))
+attach(phdata(cleanData2))
+
+#Before proceeding to GWA, let us check if complete QC improved the fit of genetic data to HWE:
+#you can see that the problems with HWE are apparently fixed; we may guess
+#that these were caused by Wahlund's effect.
+descriptives.marker(cleanData2)[2]
+
+descriptives.marker(cleanData2[dm2==1, ])[2]
+descriptives.marker(cleanData2[dm2==0, ])[2]
+
+
+############################ --- GWAS ANALYSIS --- ###########################
+################################**************################################
+#Let us start again with descriptives of the phenotypic and marker data: look at Ptt(t.test)
+descriptives.trait(cleanData2,by.var=dm2)
+
+###score test on cleaned data2
+data2.qt <- qtscore(dm2, cleanData2, trait="binomial")
+#check lambda: there is still some inflation, which is explained by the fact that we investigate
+#only a few short chromosomes with high LD and few causative variants
+lambda(data2.qt)
+#Produce the association analysis plot
+plot(data2.qt, df="Pc1df")
+
+##scan summary to show the top 10:
+descriptives.scan(data2.qt,top=10,sortby='Pc1df')
+
+##compute empirical GW significance for diabete(dm2)
+data2.qte<-qtscore(dm2,trait.type='binomial',times=1000,quiet=T,data=cleanData2)
+descriptives.scan(data2.qte,sortby='Pc1df')
+
+##adjust the GW significance for dm2 ~ sex and age:
+data2.qtsa<-qtscore(dm2~sex+age,data=cleanData2,trait.type='binomial',times=1000,quiet=T)
+descriptives.scan(data2.qtsa,top=10,sortby='Pc1df')
