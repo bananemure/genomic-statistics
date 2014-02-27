@@ -142,6 +142,8 @@ descriptives.scan(data2.qtsaBmi,top=10,sortby='Pc1df')
 #########################################################
 ##############WE USE CleanData1 for this analysis #######
 #########################################################
+
+####Part1: ETHNIC ADMIXTURE########################################################################################
 #detach cleanData2 and attach cleanData1
 detach(phdata(cleanData2))
 attach(phdata(cleanData1))
@@ -190,7 +192,7 @@ h2a <- polygenic(dm2,kinship.matrix=data1.gkin,data=cleanData1)
 #The resulting 'heritability' estimate is
 h2a$esth2
 
-####Now we can perform mixed model approximation analysis using mmscore function
+####Now we can perform MIXED polygenic MODEL (Y = mu + G + e) approximation analysis using mmscore function
 data1.mm <- mmscore(h2a,cleanData1)
 lambda(data1.mm)
 ###plot all three methods together
@@ -199,3 +201,61 @@ plot(data1.eg,ylim=c(1,6))
 plot(data1.pca,ylim=c(1,6))
 plot(data1.mm,ylim=c(1,6))
 par(mfcol=c(1,1))
+
+#############   PART 2: Analysis of family data #####################################################################
+#we use a new data set: first we clean everything
+rm(list=ls())
+data(ge03d2.clean)
+#subset data
+erfs <- ge03d2.clean[1:100,]
+#add a new attribute to erfs data
+erfs<-add.phdata(erfs,phdata(erfs)$weight,'qtbas') #or phdata(erfs)$qtbas <- phdata(erfs)$weight
+#simulate matrix of pedegree
+pkins <- matrix(rnorm(nids(erfs)^2,sd=0.01),ncol=nids(erfs),nrow=nids(erfs))
+
+#basic data exploratory
+nids(erfs)
+class(pkins)
+class(erfs)
+nsnps(erfs)
+#check the distribution of SNPs by chromosome:
+table(chromosome(erfs))
+#descriptive stats
+descriptives.marker(gtdata(erfs))
+#histogram of the distribution of the pedegree kinship coefficients
+hist(pkins[lower.tri(pkins)])
+
+###Now estimate genomic kinship matrix using autosomal data
+gkins<-ibs(erfs[,autosomal(erfs)],weight='freq')
+#summary of genomic kinship
+summary(gkins[lower.tri(gkins)])
+hist(gkins[lower.tri(gkins)],breaks=100)
+
+#relations between genomic and pedigree kinship
+plot(pkins[lower.tri(pkins)],gkins[lower.tri(gkins)])
+cor(pkins[lower.tri(pkins)],gkins[lower.tri(gkins)])
+
+####analyse the data using plain GC method:
+qts <- qtscore(qtbas,data=erfs)
+lambda(qts)$est
+#The top 10 hits from GWA analysis
+descriptives.scan(qts,sortby='Pc1df')
+#estimate genome-wide empirical significance with times argument which tells the number of permutations
+qts.e <- qtscore(qtbas,data=erfs,times=200,quiet=TRUE)
+descriptives.scan(qts.e,top=15,sortby='Pc1df')
+
+##Let us estimate polygenic model
+h2 <- polygenic(qtbas,kin=gkins,data=erfs)
+#The results of estimation are contained in "h2an" element of the resulting object
+#In the "estimate" list, the MLEs shown correspond to intercept, heritability and total variance
+h2$h2an
+
+#Let us run FASTA test using estimated polygenic model, as specified by h2
+mms <- mmscore(h2,data=erfs)
+lambda(mms)$est 
+descriptives.scan(mms,sort="Pc1df")
+
+#However, we can not estimate genome-wide significance with FASTA, because the data structure is not exchangeable.
+#Using GRAMMAS method, you can estimate nominal P-values
+grs <- qtscore(h2$pgres,data=erfs,clam=FALSE)
+lambda(grs)$est
