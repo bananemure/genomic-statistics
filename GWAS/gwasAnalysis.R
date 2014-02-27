@@ -130,3 +130,72 @@ descriptives.scan(data2.qte,sortby='Pc1df')
 ##adjust the GW significance for dm2 ~ sex and age:
 data2.qtsa<-qtscore(dm2~sex+age,data=cleanData2,trait.type='binomial',times=1000,quiet=T)
 descriptives.scan(data2.qtsa,top=10,sortby='Pc1df')
+
+##Finally, let us do stratified (by BMI) analysis. We will contracts obese (BMI >30) cases to all controls.
+data2.qtsaBmi<-qtscore(dm2~sex+age,data=cleanData2,idsubset=((bmi>=30 & dm2==1) |dm2==0),trait.type='binomial',times=1000,quiet=T)
+descriptives.scan(data2.qtsaBmi,top=10,sortby='Pc1df')
+
+
+
+#########################################################
+####        Genetics stratification             #########
+#########################################################
+##############WE USE CleanData1 for this analysis #######
+#########################################################
+#detach cleanData2 and attach cleanData1
+detach(phdata(cleanData2))
+attach(phdata(cleanData1))
+
+# fist check for inflation
+data1.qt<-qtscore(dm2,cleanData1,trait.type='binomial')
+lambda(data1.qt)
+
+#####1- structured analysis
+#define which populations (0 or 1) are in cluster1 (cl1)
+pop<-as.numeric(idnames(cleanData1) %in% cl1)
+#look how pop is distributed among cases/control
+table(pop,dm2,useNA='ifany')
+#structure association test
+data1.sa <- qtscore(dm2,data=cleanData1,strata=pop,trait.type='binomial')
+lambda(data1.sa)
+### compare this result with results where ouliers(cl1) were removed 
+par(mfcol=c(1,3))
+plot(data1.qt,ylim=c(1,6))
+plot(data2.qt,ylim=c(1,6))
+plot(data1.sa,ylim=c(1,6))
+par(mfcol=c(1,1))
+#In this case, there is little difference, because all people belonging to the smaller sub-population are cases.
+
+#Other way to adjust for genetic (sub)structure is to apply the method of Price et al. (EIGENSTRAT), which make 
+#use of principal components of the genomic kinship matrix to adjust both phenotypes and genotypes for possible stratification
+
+data1.eg <- egscore(dm2,data=cleanData1,kin=data1.gkin)
+lambda(data1.eg)
+plot(data1.eg,ylim=c(1,6))
+
+#Now let us apply adjustment for the stratification by use of the principal
+#components of genetic variation. For that we first need to extract the principal
+#components of genetic variation by constructing the distance matrix
+dst <- as.dist(0.5-data1.gkin)
+#performing the classical multidimensional scaling
+pcs <- cmdscale(dst,k=10)
+#Now we can use these PCs for adjustment:
+data1.pca <- qtscore(dm2~pcs[,1]+pcs[,2]+pcs[,3],cleanData1,quiet=T)
+lambda(data1.pca)
+plot(data1.pca)
+
+##Finally, let us use the full genomic kinship matrix for the adjustemnt for
+##population structure. First, let us estimate the polygenic model with
+h2a <- polygenic(dm2,kinship.matrix=data1.gkin,data=cleanData1)
+#The resulting 'heritability' estimate is
+h2a$esth2
+
+####Now we can perform mixed model approximation analysis using mmscore function
+data1.mm <- mmscore(h2a,cleanData1)
+lambda(data1.mm)
+###plot all three methods together
+par(mfcol=c(1,3))
+plot(data1.eg,ylim=c(1,6))
+plot(data1.pca,ylim=c(1,6))
+plot(data1.mm,ylim=c(1,6))
+par(mfcol=c(1,1))
